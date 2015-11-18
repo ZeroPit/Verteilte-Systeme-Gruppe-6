@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -14,24 +15,37 @@ namespace VerteilteSysteme
 {
     public partial class Form1 : Form
     {
-       
-        double Sx = -2.1;
-        double Sy = -1.3;
-        double Fx = 1;
-        double Fy = 1.3;
+        #region Variablen
+        double _Sx = -2.1;
+        double _Sy = -1.3;
+        double _Fx = 1;
+        double _Fy = 1.3;
 
-        Point pStart = Point.Empty;
-        Point pFinish = Point.Empty;
+        Point _StartPoint = Point.Empty;
+
 
         Color[] _DrawColors;
 
-        Bitmap _OutputBitmap = null;
+        #endregion Variablen
+
+        #region Konstrukto
 
         public Form1()
         {
             InitializeComponent();
             createColor();
         }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            initMandel();
+        }
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            initMandel();
+        }
+        #endregion Konstrukto
+
+        #region init
 
         private void createColor()
         {
@@ -56,31 +70,28 @@ namespace VerteilteSysteme
                 i2++;
             }
         }
-
-        private void button1_Click(object sender, EventArgs e)
+        private void initMandel()
         {
-            DrawMandel();
-        }
+            _Sx = -2.1;
+            _Sy = -1.3;
+            _Fx = 1;
+            _Fy = 1.3;
 
-
-     
-        private void DrawMandel()
-        {
             Bitmap b = new Bitmap(this.Width, this.Height);
             double x, y, x1, y1, xx, xmin, xmax, ymin, ymax = 0.0;
             int looper, s, z = 0;
             double intigralX, intigralY = 0.0;
-            xmin = Sx;
-            ymin = Sy;
-            xmax = Fx;
-            ymax = Fy;
-            intigralX = (xmax - xmin) / palOutput.Width;
-            intigralY = (ymax - ymin) / palOutput.Height;
+            xmin = _Sx;
+            ymin = _Sy;
+            xmax = _Fx;
+            ymax = _Fy;
+            intigralX = (xmax - xmin) / plBack.Width;
+            intigralY = (ymax - ymin) / plBack.Height;
             x = xmin;
-            for (s = 1; s < palOutput.Width; s++)
+            for (s = 1; s < plBack.Width; s++)
             {
                 y = ymin;
-                for (z = 1; z < palOutput.Height; z++)
+                for (z = 1; z < plBack.Height; z++)
                 {
                     x1 = 0;
                     y1 = 0;
@@ -99,10 +110,17 @@ namespace VerteilteSysteme
                 }
                 x += intigralX;
             }
-            _OutputBitmap = b;
-            palOutput.BackgroundImage = (Image)_OutputBitmap;           
+            plBack.BackgroundImage = (Image)b;
+            update();
         }
 
+        #endregion init
+
+        #region Button
+        private void button1_Click(object sender, EventArgs e)
+        {
+            initMandel();
+        }
         private void button2_Click(object sender, EventArgs e)
         {
 
@@ -146,8 +164,154 @@ namespace VerteilteSysteme
             queue.ExecuteTask(kernel, null);
 
             // wait for completion
-            queue.Finish();        
+            queue.Finish();
         }
+        private void btnZoom_Click(object sender, EventArgs e)
+        {
+            double lWidth, lHeight, lNewWidth, lNewHeight;
+
+            lWidth = (_Fx - _Sx);
+            lHeight = (_Fy - _Sy);
+
+            lNewWidth = lWidth / 4;
+            lNewHeight = lHeight / 4;
+
+            _Sx = _Sx + lNewWidth;
+            _Fx = _Fx - lNewWidth;
+
+            _Sy = _Sy + lNewHeight;
+            _Fy = _Fy - lNewHeight;
+
+            DrawMandel();
+        }
+
+        #endregion Button
+
+        #region Update
+        private void update()
+        {
+            //delegate void myTC_fertigCallback(int e); 
+
+
+            //if(this.InvokeRequired == true) 
+            //{ 
+
+            //   this.Invoke(callback); 
+            //} else
+
+
+        }
+        private void updateInfo()
+        {
+            lblInfo.Text = string.Format("X Position: {0}, Y Position: {1} Breite/Höhe : {2}/{3}", _Sx, _Sy, (_Fx - _Sx), (_Fy - _Sy));
+        }
+        #endregion Update
+
+        private void DrawMandel()
+        {
+            Bitmap b = new Bitmap(this.Width, this.Height);
+            double x, y, x1, y1, xx, xmin, xmax, ymin, ymax = 0.0;
+            int looper, s, z = 0;
+            double intigralX, intigralY = 0.0;
+            xmin = _Sx;
+            ymin = _Sy;
+            xmax = _Fx;
+            ymax = _Fy;
+            intigralX = (xmax - xmin) / plBack.Width;
+            intigralY = (ymax - ymin) / plBack.Height;
+            x = xmin;
+            for (s = 1; s < plBack.Width; s++)
+            {
+                y = ymin;
+                for (z = 1; z < plBack.Height; z++)
+                {
+                    x1 = 0;
+                    y1 = 0;
+                    looper = 0;
+                    while (looper < 200 && Math.Sqrt((x1 * x1) + (y1 * y1)) < 2)
+                    {
+                        looper++;
+                        xx = (x1 * x1) - (y1 * y1) + x;
+                        y1 = 2 * x1 * y1 + y;
+                        x1 = xx;
+                    }
+                    if(looper == 200)
+                    { }
+                    double perc = looper / (200.0);
+                    int val = ((int)(perc * 255));
+                    b.SetPixel(s, z, _DrawColors[val]);
+                    y += intigralY;
+                }
+                x += intigralX;
+            }
+            plBack.BackgroundImage = (Image)b;
+            update();
+        }
+
+
+        #region Events
+
+        private void palOutput_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _StartPoint = new Point(e.X, e.Y);
+            }
+        }
+        private void palOutput_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                if (_StartPoint != Point.Empty)
+                {
+                    Point lTempPoint = new Point(e.X, _StartPoint.Y + ((int)(((plFore.Height - 28) / (plFore.Width * 1.0)) * (e.X - _StartPoint.X))));
+                    Rectangle lRect = Rectangle.FromLTRB(_StartPoint.X, _StartPoint.Y, lTempPoint.X, lTempPoint.Y);
+                    Bitmap lBitmap = new Bitmap(plFore.Width, plFore.Height);
+                    Graphics g = Graphics.FromImage((Image)lBitmap);
+                    g.DrawRectangle(new Pen(Brushes.Red, 3), lRect);
+                    plFore.BackgroundImage = null;
+                    plFore.BackgroundImage = (Image)lBitmap;
+                }
+            }
+        }
+        private void palOutput_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                if (_StartPoint != Point.Empty)
+                {
+                    Point lFinishPoint = new Point(e.X, _StartPoint.Y + ((int)(((plFore.Height - 28) / (plFore.Width * 1.0)) * (e.X - _StartPoint.X))));
+                    double distX = _Fx - _Sx;
+                    double distY = _Fy - _Sy;
+                    double oSx = _Sx;
+                    double oSy = _Sy;
+                    _Sx = (_StartPoint.X / (plFore.Width * 1.0)) * distX;
+                    _Sx += oSx;
+                    _Fx = (lFinishPoint.X / (plFore.Width * 1.0)) * distX;
+                    _Fx += oSx;
+                    _Sy = (_StartPoint.Y / (plFore.Height * 1.0)) * distY;
+                    _Sy += oSy;
+                    _Fy = (lFinishPoint.Y / (plFore.Height * 1.0)) * distY;
+                    _Fy += oSy;
+                    Thread tsv = new Thread(new ThreadStart(this.DrawMandel));
+                    tsv.Start();
+                    _StartPoint = Point.Empty;
+                    plFore.BackgroundImage = null;
+                }
+            }
+        }
+        private void palOutput_MouseLeave(object sender, EventArgs e)
+        {
+            _StartPoint = Point.Empty;
+            plFore.BackgroundImage = null;
+        }
+
+        #endregion Events
+
+       
+
+
+
 
 
 
