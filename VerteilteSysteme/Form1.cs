@@ -22,20 +22,33 @@ namespace VerteilteSysteme
     {
         #region Variablen
 
+        //               _Fy
+        //                |
+        //                |
+        //  _Sx-----------0------_Fx
+        //                |
+        //                |
+        //               _Sy
+
         double _Sx = -2.1;
         double _Sy = -1.3;
         double _Fx = 1;
         double _Fy = 1.3;
 
+        double _LastPositionX = 0.0;
+        double _LastPositionY = 0.0;
+
+
         Point _StartPoint = Point.Empty;
-        Bitmap _AreaBitmap = null;      
+        Bitmap _AreaBitmap = null;
         Color[] _DrawColors;
 
+        bool _UseGPU = true;
         bool _XYFinder = false;
 
         // That's our custom TextWriter class
         TextWriter _writer = null;
- 
+
         #endregion Variablen
 
         #region Konstrukto
@@ -69,15 +82,15 @@ namespace VerteilteSysteme
         }
         private void btnJumpToPosition_Click(object sender, EventArgs e)
         {
-            calculateMandelwithGPU();
+            zoomToPosition();
         }
         private void btnStartZoom_Click(object sender, EventArgs e)
         {
-
+            startAutoZoom();
         }
         private void btnStopZoom_Click(object sender, EventArgs e)
         {
-
+            stopAutoZoom();
         }
         private void btnZoomDown_Click(object sender, EventArgs e)
         {
@@ -167,7 +180,7 @@ namespace VerteilteSysteme
                 {
                     Point lTempPoint = new Point(e.X, _StartPoint.Y + ((int)(((plFore.Height - 28) / (plFore.Width * 1.0)) * (e.X - _StartPoint.X))));
                     Rectangle lRect = Rectangle.FromLTRB(_StartPoint.X, _StartPoint.Y, lTempPoint.X, lTempPoint.Y);
-                    if(_AreaBitmap != null)
+                    if (_AreaBitmap != null)
                         _AreaBitmap.Dispose();
                     _AreaBitmap = new Bitmap(plFore.Width, plFore.Height);
                     Graphics g = Graphics.FromImage((Image)_AreaBitmap);
@@ -202,10 +215,10 @@ namespace VerteilteSysteme
                     _Sy += oSy;
                     _Fy = (lFinishPoint.Y / (plFore.Height * 1.0)) * distY;
                     _Fy += oSy;
-                    Thread tsv = new Thread(new ThreadStart(this.calculateMandelwithGPU));
-                    tsv.Start();
+
                     _StartPoint = Point.Empty;
                     plFore.BackgroundImage = null;
+                    calculateMandel();
                 }
             }
         }
@@ -223,8 +236,35 @@ namespace VerteilteSysteme
 
         #endregion Mouse Events
 
-        #endregion Events
+        #region Auto Zoom Events
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void timZoom_Tick(object sender, EventArgs e)
+        {
+
+            double lZoom = 0.98;
+            double lWidth = (_Fx - _Sx);
+            double lHeight = (_Fy - _Sy);
+
+            double lNewWidth = (lWidth - (lWidth * lZoom)) / 2;
+            double lNewHeight = (lHeight - (lHeight * lZoom)) / 2;
+
+            _Sx = _Sx + lNewWidth;
+            _Fx = _Fx - lNewWidth;
+
+            _Sy = _Sy + lNewHeight;
+            _Fy = _Fy - lNewHeight;
+
+            calculateMandel();
+        }
+
+        #endregion Auto Zoom Events
+
+        #endregion Events
 
         #region Private Funktionen
 
@@ -275,7 +315,7 @@ namespace VerteilteSysteme
                 x += intigralX;
             }
             plBack.BackgroundImage = (Image)b;
-            update();
+            updateInfo();
         }
 
         private void initOpenCL()
@@ -290,7 +330,7 @@ namespace VerteilteSysteme
 
             //Compiles the source codes. The source is a string array because the user may want
             //to split the source into many strings.
-            OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });                      
+            OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });
         }
 
         #endregion Init Funktionen
@@ -348,14 +388,121 @@ namespace VerteilteSysteme
             grbSettings.Enabled = true;
             plFore.Cursor = Cursors.Default;
 
-            double intigralX = (_Sy - _Sx) / plBack.Width;
-            double intigralY = (_Fy - _Fx) / plBack.Height;
+            double intigralX = (_Fx - _Sx) / plBack.Width;
+            double intigralY = (_Fy - _Sy) / plBack.Height;
 
-            txtPositionX.Text = (intigralX * pPoint.X).ToString();
-            txtPositionY.Text = (intigralY * pPoint.Y).ToString();
+            int lAddX = pPoint.X;
+            int lAddY = pPoint.Y;
+
+            if (plBack.Width / 2 < lAddX)
+            {
+                lAddX = lAddX - (plBack.Width / 2);
+                txtPositionX.Text = (_LastPositionX + (intigralX * lAddX)).ToString();
+            }
+            else
+            {
+                lAddX = (plBack.Width / 2) - lAddX;
+                txtPositionX.Text = (_LastPositionX - (intigralX * lAddX)).ToString();
+            }
+
+            if (plBack.Height / 2 < lAddY)
+            {
+                lAddY = lAddY - (plBack.Height / 2);
+                txtPositionY.Text = (_LastPositionY - (intigralY * lAddY)).ToString();
+            }
+            else
+            {
+                lAddY = (plBack.Height / 2) - lAddY;
+                txtPositionY.Text = (_LastPositionY + (intigralY * lAddY)).ToString();
+            }
+
+        }
+
+        private void zoomToPosition()
+        {
+            double lZoom = 1.0;
+            double lPositionX = 0.0;
+            double lPositionY = 0.0;
+            if (double.TryParse(txtPositionX.Text, out lPositionX) && double.TryParse(txtPositionY.Text, out lPositionY))
+            {
+                lZoom = 1 - ((double)nudZoom.Value / 100);
+
+                double lWidth = (_Fx - _Sx);
+                double lHeight = (_Fy - _Sy);
+
+                if (_LastPositionX != lPositionX)
+                {
+                    double lNewWidth = (lWidth * lZoom) / 2;
+                    double lNewHeight = (lHeight * lZoom) / 2;
+
+                    _Sx = lPositionX - lNewWidth;
+                    _Fx = lPositionX + lNewWidth;
+
+                    _Sy = (lPositionY * -1) - lNewHeight;
+                    _Fy = (lPositionY * -1) + lNewHeight;
+                }
+                else
+                {
+                    double lNewWidth = (lWidth - (lWidth * lZoom)) / 2;
+                    double lNewHeight = (lHeight - (lHeight * lZoom)) / 2;
+                    _Sx = _Sx + lNewWidth;
+                    _Fx = _Fx - lNewWidth;
+
+                    _Sy = _Sy + lNewHeight;
+                    _Fy = _Fy - lNewHeight;
+                }
+                calculateMandel();
+            }
         }
 
         #endregion XY Position Zoom
+
+        #region XY Auto Zoom
+
+        /// <summary>
+        /// Startet den Timer setzt den start aus XY Positionierung
+        /// </summary>
+        private void startAutoZoom()
+        {
+            if (!timZoom.Enabled)
+            {
+                double lZoom = 1.0;
+                double lPositionX = 0.0;
+                double lPositionY = 0.0;
+                if (double.TryParse(txtPositionX.Text, out lPositionX) && double.TryParse(txtPositionY.Text, out lPositionY))
+                {
+                    lZoom = 1 - ((double)nudZoom.Value / 100);
+
+                    double lWidth = (_Fx - _Sx);
+                    double lHeight = (_Fy - _Sy);
+
+                    double lNewWidth = (lWidth * lZoom) / 2;
+                    double lNewHeight = (lHeight * lZoom) / 2;
+
+                    if (_LastPositionX != lPositionX)
+                    {
+                        _Sx = lPositionX - lNewWidth;
+                        _Fx = lPositionX + lNewWidth;
+
+                        _Sy = (lPositionY * -1) - lNewHeight;
+                        _Fy = (lPositionY * -1) + lNewHeight;
+                    }
+                    calculateMandel();
+                    timZoom.Interval = (int)nudZoomSpeed.Value;
+                    timZoom.Start();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Stoppt den Timer 
+        /// </summary>
+        private void stopAutoZoom()
+        {
+            timZoom.Stop();
+        }
+
+        #endregion XY Auto Zoom
 
         #region Quick Zoom Funktionen
 
@@ -372,8 +519,8 @@ namespace VerteilteSysteme
 
             if (Up)
             {
-                lNewWidth = lWidth * 2;
-                lNewHeight = lHeight * 2;
+                lNewWidth = lWidth / 2;
+                lNewHeight = lHeight / 2;
 
                 _Sx = _Sx - lNewWidth;
                 _Fx = _Fx + lNewWidth;
@@ -383,8 +530,8 @@ namespace VerteilteSysteme
             }
             else
             {
-                lNewWidth = lWidth / 2;
-                lNewHeight = lHeight / 2;
+                lNewWidth = lWidth / 4;
+                lNewHeight = lHeight / 4;
 
                 _Sx = _Sx + lNewWidth;
                 _Fx = _Fx - lNewWidth;
@@ -393,7 +540,7 @@ namespace VerteilteSysteme
                 _Fy = _Fy - lNewHeight;
             }
 
-            calculateMandelwithGPU();
+            calculateMandel();
         }
 
         #endregion Quick Zoom Funktionen
@@ -410,7 +557,7 @@ namespace VerteilteSysteme
             //Gets host access to the OpenCL floatVectorSum kernel
             OpenCLTemplate.CLCalc.Program.Kernel lHelloWorldKernel = new OpenCLTemplate.CLCalc.Program.Kernel("helloWorld");
             //Execute the kernel
-            lHelloWorldKernel.Execute(null, 1); 
+            lHelloWorldKernel.Execute(null, 1);
         }
 
         /// <summary>
@@ -460,39 +607,31 @@ namespace VerteilteSysteme
 
             //Ausgabe über die CPU Console -> TextBox in der Form
             for (int i = 0; i < n; i++)
-               Console.WriteLine(String.Format("Ergebnis {0} : {1}",i + 1, lInteger1[i]));
+                Console.WriteLine(String.Format("Ergebnis {0} : {1}", i + 1, lInteger1[i]));
         }
 
         #endregion OpenCL Test Funktionen
 
-        #endregion  Private Funktionen
+        #region Mandel Berechnung
 
-        #region Update
-        private void update()
+        /// <summary>
+        /// Berechnung der Mandelbrot Menge
+        /// und Grafische ausgabe
+        /// </summary>
+        private void calculateMandel()
         {
-            //delegate void myTC_fertigCallback(int e); 
-
-
-            //if(this.InvokeRequired == true) 
-            //{ 
-
-            //   this.Invoke(callback); 
-            //} else
-
-
+            if (_UseGPU)
+                calculateMandelwithGPU();
+            else
+                calculateMandelwithCPU();
+            updateInfo();
         }
-        private void updateInfo()
-        {
-            lblInfo.Text = string.Format("X Position: {0}, Y Position: {1} Breite/Höhe : {2}/{3}", _Sx, _Sy, (_Fx - _Sx), (_Fy - _Sy));
-        }
-        #endregion Update
 
-
-
+        /// <summary>
+        /// Berechnung mittels der GPU
+        /// </summary>
         private void calculateMandelwithGPU()
         {
-           
-
             //Gets host access to the OpenCL floatVectorSum kernel
             OpenCLTemplate.CLCalc.Program.Kernel VectorSum = new OpenCLTemplate.CLCalc.Program.Kernel("calculateMandel");
 
@@ -508,8 +647,6 @@ namespace VerteilteSysteme
             lStartValues[3] = _Fy;
             lStartValues[4] = plBack.Width;
             lStartValues[5] = plBack.Height;
-
-           
 
             //Creates vectors v1 and v2 in the device memory
             OpenCLTemplate.CLCalc.Program.Variable lVariable1 = new OpenCLTemplate.CLCalc.Program.Variable(lCalculation);
@@ -534,20 +671,16 @@ namespace VerteilteSysteme
             for (int i = 0; i < n; i++)
             {
                 int s = i % lW;
-                int z = i  / lW ;              
-                b.SetPixel(s, z , _DrawColors[lCalculation[i]]);
+                int z = i / lW;
+                b.SetPixel(s, z, _DrawColors[lCalculation[i]]);
             }
             plBack.BackgroundImage = (Image)b;
-            update();
-            
         }
 
-
-
         /// <summary>
-        ///  Berrechnung mittels der CPU
+        /// Berechnung mittels der CPU
         /// </summary>
-        private void drawMandel()
+        private void calculateMandelwithCPU()
         {
             Bitmap b = new Bitmap(this.Width, this.Height);
             double x, y, x1, y1, xx, xmin, xmax, ymin, ymax = 0.0;
@@ -568,7 +701,7 @@ namespace VerteilteSysteme
                     x1 = 0;
                     y1 = 0;
                     looper = 0;
-                    while (looper < 200 && Math.Sqrt((x1 * x1) + (y1 * y1)) < 2)
+                    while (looper < 254 && Math.Sqrt((x1 * x1) + (y1 * y1)) < 2)
                     {
                         looper++;
                         xx = (x1 * x1) - (y1 * y1) + x;
@@ -583,7 +716,26 @@ namespace VerteilteSysteme
                 x += intigralX;
             }
             plBack.BackgroundImage = (Image)b;
-            update();
+
         }
+
+        #endregion Mandel Berechnung
+
+        #region Info
+
+        /// <summary>
+        /// Die Info Ausgabe Aktualisieren
+        /// </summary>
+        private void updateInfo()
+        {
+            _LastPositionX = _Sx + ((_Fx - _Sx) / 2);
+            _LastPositionY = (_Sy + ((_Fy - _Sy) / 2)) * (-1);
+
+            lblInfo.Text = string.Format("X Position: {0}, Y Position: {1}", _LastPositionX, _LastPositionY);
+        }
+
+        #endregion Info
+
+        #endregion  Private Funktionen
     }
 }

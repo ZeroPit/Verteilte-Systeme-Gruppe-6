@@ -28,11 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.grbDisplayMandelbrot = new System.Windows.Forms.GroupBox();
             this.lblInfo = new System.Windows.Forms.Label();
             this.btnReset = new System.Windows.Forms.Button();
             this.btnTest1 = new System.Windows.Forms.Button();
             this.grbSettings = new System.Windows.Forms.GroupBox();
+            this.lblSpeedTyp = new System.Windows.Forms.Label();
+            this.lblZoomTyp = new System.Windows.Forms.Label();
+            this.txtConsole = new System.Windows.Forms.TextBox();
             this.btnFindPosition = new System.Windows.Forms.Button();
             this.label10 = new System.Windows.Forms.Label();
             this.btnTest2 = new System.Windows.Forms.Button();
@@ -55,7 +59,7 @@
             this.lblPositionX = new System.Windows.Forms.Label();
             this.txtPositionX = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.txtConsole = new System.Windows.Forms.TextBox();
+            this.timZoom = new System.Windows.Forms.Timer(this.components);
             this.plBack = new VerteilteSysteme.MyPannel();
             this.plFore = new VerteilteSysteme.MyPannel();
             this.grbDisplayMandelbrot.SuspendLayout();
@@ -114,6 +118,8 @@
             // 
             this.grbSettings.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.grbSettings.Controls.Add(this.lblSpeedTyp);
+            this.grbSettings.Controls.Add(this.lblZoomTyp);
             this.grbSettings.Controls.Add(this.txtConsole);
             this.grbSettings.Controls.Add(this.btnFindPosition);
             this.grbSettings.Controls.Add(this.label10);
@@ -144,6 +150,38 @@
             this.grbSettings.TabIndex = 1;
             this.grbSettings.TabStop = false;
             this.grbSettings.Text = "Einstellungen";
+            // 
+            // lblSpeedTyp
+            // 
+            this.lblSpeedTyp.AutoSize = true;
+            this.lblSpeedTyp.Location = new System.Drawing.Point(205, 215);
+            this.lblSpeedTyp.Name = "lblSpeedTyp";
+            this.lblSpeedTyp.Size = new System.Drawing.Size(20, 13);
+            this.lblSpeedTyp.TabIndex = 26;
+            this.lblSpeedTyp.Text = "ms";
+            // 
+            // lblZoomTyp
+            // 
+            this.lblZoomTyp.AutoSize = true;
+            this.lblZoomTyp.Location = new System.Drawing.Point(205, 141);
+            this.lblZoomTyp.Name = "lblZoomTyp";
+            this.lblZoomTyp.Size = new System.Drawing.Size(15, 13);
+            this.lblZoomTyp.TabIndex = 25;
+            this.lblZoomTyp.Text = "%";
+            // 
+            // txtConsole
+            // 
+            this.txtConsole.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtConsole.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtConsole.Location = new System.Drawing.Point(6, 433);
+            this.txtConsole.Multiline = true;
+            this.txtConsole.Name = "txtConsole";
+            this.txtConsole.ReadOnly = true;
+            this.txtConsole.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtConsole.Size = new System.Drawing.Size(214, 86);
+            this.txtConsole.TabIndex = 24;
             // 
             // btnFindPosition
             // 
@@ -266,8 +304,18 @@
             // nudZoom
             // 
             this.nudZoom.Location = new System.Drawing.Point(95, 139);
+            this.nudZoom.Maximum = new decimal(new int[] {
+            25,
+            0,
+            0,
+            0});
+            this.nudZoom.Minimum = new decimal(new int[] {
+            5,
+            0,
+            0,
+            0});
             this.nudZoom.Name = "nudZoom";
-            this.nudZoom.Size = new System.Drawing.Size(128, 20);
+            this.nudZoom.Size = new System.Drawing.Size(104, 20);
             this.nudZoom.TabIndex = 6;
             this.nudZoom.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             this.nudZoom.Value = new decimal(new int[] {
@@ -278,11 +326,31 @@
             // 
             // nudZoomSpeed
             // 
+            this.nudZoomSpeed.Increment = new decimal(new int[] {
+            100,
+            0,
+            0,
+            0});
             this.nudZoomSpeed.Location = new System.Drawing.Point(95, 213);
+            this.nudZoomSpeed.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.nudZoomSpeed.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
             this.nudZoomSpeed.Name = "nudZoomSpeed";
-            this.nudZoomSpeed.Size = new System.Drawing.Size(128, 20);
+            this.nudZoomSpeed.Size = new System.Drawing.Size(104, 20);
             this.nudZoomSpeed.TabIndex = 10;
             this.nudZoomSpeed.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.nudZoomSpeed.Value = new decimal(new int[] {
+            500,
+            0,
+            0,
+            0});
             // 
             // lblZoomSpeed
             // 
@@ -364,19 +432,9 @@
             this.label1.Text = "Powered by: Merlin, Nicklas und Peter für den Kurs Verteilte Systeme bei Prof. La" +
     "ng";
             // 
-            // txtConsole
+            // timZoom
             // 
-            this.txtConsole.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtConsole.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtConsole.Location = new System.Drawing.Point(6, 433);
-            this.txtConsole.Multiline = true;
-            this.txtConsole.Name = "txtConsole";
-            this.txtConsole.ReadOnly = true;
-            this.txtConsole.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtConsole.Size = new System.Drawing.Size(214, 86);
-            this.txtConsole.TabIndex = 24;
+            this.timZoom.Tick += new System.EventHandler(this.timZoom_Tick);
             // 
             // plBack
             // 
@@ -464,6 +522,9 @@
         private System.Windows.Forms.Button btnJumpToPosition;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox txtConsole;
+        private System.Windows.Forms.Timer timZoom;
+        private System.Windows.Forms.Label lblSpeedTyp;
+        private System.Windows.Forms.Label lblZoomTyp;
     }
 }
 

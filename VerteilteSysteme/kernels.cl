@@ -36,7 +36,7 @@ __kernel void calculateMandel(__global int * pCalculation,__global double * pSta
 	int s =  i % lW;
 	int z  = i / lW ;
 
-	double x = xmin +  s * intigralX;
+	double x = xmin + s * intigralX;
 	double y = ymin + z * intigralY;
 
 	double x1 = 0;
