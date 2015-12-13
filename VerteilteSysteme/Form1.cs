@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using System.Runtime.InteropServices;
+
 namespace VerteilteSysteme
 {
     /// <summary>
@@ -26,12 +28,14 @@ namespace VerteilteSysteme
         double _Fy = 1.3;
 
         Point _StartPoint = Point.Empty;
-        Bitmap _AreaBitmap = null;
-        Bitmap _MadnelBitmap = null;
+        Bitmap _AreaBitmap = null;      
         Color[] _DrawColors;
 
         bool _XYFinder = false;
 
+        // That's our custom TextWriter class
+        TextWriter _writer = null;
+ 
         #endregion Variablen
 
         #region Konstrukto
@@ -42,8 +46,18 @@ namespace VerteilteSysteme
         public Form1()
         {
             InitializeComponent();
+            initOpenCL();
             createColor();
         }
+
+        /// <summary>
+        /// Kernel32 Funktion AllocConsole
+        /// zum öffnen der Console zur laufzeit 
+        /// </summary>
+        /// <returns></returns>
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
 
         #endregion Konstrukto
 
@@ -55,7 +69,7 @@ namespace VerteilteSysteme
         }
         private void btnJumpToPosition_Click(object sender, EventArgs e)
         {
-
+            calculateMandelwithGPU();
         }
         private void btnStartZoom_Click(object sender, EventArgs e)
         {
@@ -101,6 +115,13 @@ namespace VerteilteSysteme
         private void Form1_Load(object sender, EventArgs e)
         {
             initMandel();
+            AllocConsole();
+            Console.WriteLine("Ausgabe GPU");
+            // Instantiate the writer
+            _writer = new StreamTextBox(txtConsole);
+            // Redirect the out Console stream
+            Console.SetOut(_writer);
+            Console.WriteLine("Ausgabe CPU");
         }
 
         /// <summary>
@@ -181,7 +202,7 @@ namespace VerteilteSysteme
                     _Sy += oSy;
                     _Fy = (lFinishPoint.Y / (plFore.Height * 1.0)) * distY;
                     _Fy += oSy;
-                    Thread tsv = new Thread(new ThreadStart(this.drawMandel));
+                    Thread tsv = new Thread(new ThreadStart(this.calculateMandelwithGPU));
                     tsv.Start();
                     _StartPoint = Point.Empty;
                     plFore.BackgroundImage = null;
@@ -239,7 +260,7 @@ namespace VerteilteSysteme
                     x1 = 0;
                     y1 = 0;
                     looper = 0;
-                    while (looper < 100 && Math.Sqrt((x1 * x1) + (y1 * y1)) < 2)
+                    while (looper < 254 && Math.Sqrt((x1 * x1) + (y1 * y1)) < 2)
                     {
                         looper++;
                         xx = (x1 * x1) - (y1 * y1) + x;
@@ -269,10 +290,7 @@ namespace VerteilteSysteme
 
             //Compiles the source codes. The source is a string array because the user may want
             //to split the source into many strings.
-            OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });
-
-            //Gets host access to the OpenCL floatVectorSum kernel
-            OpenCLTemplate.CLCalc.Program.Kernel VectorSum = new OpenCLTemplate.CLCalc.Program.Kernel("helloWorld");
+            OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });                      
         }
 
         #endregion Init Funktionen
@@ -375,7 +393,7 @@ namespace VerteilteSysteme
                 _Fy = _Fy - lNewHeight;
             }
 
-            drawMandel();
+            calculateMandelwithGPU();
         }
 
         #endregion Quick Zoom Funktionen
@@ -383,19 +401,66 @@ namespace VerteilteSysteme
         #region OpenCL Test Funktionen
 
         /// <summary>
-        /// 
+        /// OpenCL Test 1
+        /// Es wird die Funktion helloWorld genutzt
+        /// Die Hello OpenCL über die GPU Console ausgibt
         /// </summary>
         private void test1()
         {
-
+            //Gets host access to the OpenCL floatVectorSum kernel
+            OpenCLTemplate.CLCalc.Program.Kernel lHelloWorldKernel = new OpenCLTemplate.CLCalc.Program.Kernel("helloWorld");
+            //Execute the kernel
+            lHelloWorldKernel.Execute(null, 1); 
         }
 
         /// <summary>
-        /// 
+        /// OpenCL Test 2
+        /// Es wird die Funktion sumTwoIntegers genutzt
+        /// Die zwei Integers Arrays übergeben bekommt und Summiert
+        /// Die Berechnungen werden über die GPU Console ausgeben
+        /// und das Ergebnis nochmals über die CPU Console
         /// </summary>
         private void test2()
         {
+            //Gets host access to the OpenCL floatVectorSum kernel
+            OpenCLTemplate.CLCalc.Program.Kernel VectorSum = new OpenCLTemplate.CLCalc.Program.Kernel("sumTwoIntegers");
 
+            //We want to sum 10 numbers
+            int n = 10;
+
+            //Create vectors with 2000 numbers
+            int[] lInteger1 = new int[n];
+            int[] lInteger2 = new int[n];
+
+            //Zufallszahl generieren mittels Random   
+            Random lRandom = new Random();
+
+            //Creates population for v1 and v2
+            for (int i = 0; i < n; i++)
+            {
+                lInteger1[i] = lRandom.Next(0, n);
+                lInteger2[i] = lRandom.Next(0, n);
+            }
+
+            //Creates vectors v1 and v2 in the device memory
+            OpenCLTemplate.CLCalc.Program.Variable lVariable1 = new OpenCLTemplate.CLCalc.Program.Variable(lInteger1);
+            OpenCLTemplate.CLCalc.Program.Variable lVariable2 = new OpenCLTemplate.CLCalc.Program.Variable(lInteger2);
+
+            //Arguments of VectorSum kernel
+            OpenCLTemplate.CLCalc.Program.Variable[] lArgsVariable = new OpenCLTemplate.CLCalc.Program.Variable[] { lVariable1, lVariable2 };
+
+            //How many workers will there be? We need “n”, one for each element
+            int[] lWorkers = new int[1] { n };
+
+            //Execute the kernel
+            VectorSum.Execute(lArgsVariable, lWorkers);
+
+            //Read device memory varV1 to host memory v1
+            lVariable1.ReadFromDeviceTo(lInteger1);
+
+            //Ausgabe über die CPU Console -> TextBox in der Form
+            for (int i = 0; i < n; i++)
+               Console.WriteLine(String.Format("Ergebnis {0} : {1}",i + 1, lInteger1[i]));
         }
 
         #endregion OpenCL Test Funktionen
@@ -423,51 +488,60 @@ namespace VerteilteSysteme
         #endregion Update
 
 
-        private void sbutton2_Click(object sender, EventArgs e)
+
+        private void calculateMandelwithGPU()
         {
+           
 
-            // pick first platform
-            ComputePlatform platform = ComputePlatform.Platforms[0];
+            //Gets host access to the OpenCL floatVectorSum kernel
+            OpenCLTemplate.CLCalc.Program.Kernel VectorSum = new OpenCLTemplate.CLCalc.Program.Kernel("calculateMandel");
 
-            // create context with all gpu devices
-            ComputeContext context = new ComputeContext(ComputeDeviceTypes.Gpu,
-                new ComputeContextPropertyList(platform), null, IntPtr.Zero);
+            //Anzahl aller Pixel die Berechnet werden müssen
+            int n = plBack.Width * plBack.Height;
+            int[] lCalculation = new int[n];
 
-            // create a command queue with first gpu found
-            ComputeCommandQueue queue = new ComputeCommandQueue(context,
-                context.Devices[0], ComputeCommandQueueFlags.None);
+            //Start Variablen für die Berechnung
+            double[] lStartValues = new double[6];
+            lStartValues[0] = _Sx;
+            lStartValues[1] = _Sy;
+            lStartValues[2] = _Fx;
+            lStartValues[3] = _Fy;
+            lStartValues[4] = plBack.Width;
+            lStartValues[5] = plBack.Height;
 
-            // load opencl source
-            StreamReader streamReader = new StreamReader("../../kernels.cl");
-            string clSource = streamReader.ReadToEnd();
-            streamReader.Close();
+           
 
-            // create program with opencl source
-            ComputeProgram program = new ComputeProgram(context, clSource);
+            //Creates vectors v1 and v2 in the device memory
+            OpenCLTemplate.CLCalc.Program.Variable lVariable1 = new OpenCLTemplate.CLCalc.Program.Variable(lCalculation);
+            OpenCLTemplate.CLCalc.Program.Variable lVariable2 = new OpenCLTemplate.CLCalc.Program.Variable(lStartValues);
 
-            // compile opencl source
-            program.Build(null, null, null, IntPtr.Zero);
+            //Arguments of VectorSum kernel
+            OpenCLTemplate.CLCalc.Program.Variable[] lArgsVariable = new OpenCLTemplate.CLCalc.Program.Variable[] { lVariable1, lVariable2 };
 
-            // load chosen kernel from program
-            ComputeKernel kernel = program.CreateKernel("helloWorld");
+            //How many workers will there be? We need “n”, one for each element
+            int[] lWorkers = new int[1] { n };
 
-            // create a ten integer array and its length
-            int[] message = new int[] { 1, 2, 3, 4, 5 };
-            int messageSize = message.Length;
+            //Execute the kernel
+            VectorSum.Execute(lArgsVariable, lWorkers);
 
-            // allocate a memory buffer with the message (the int array)
-            ComputeBuffer<int> messageBuffer = new ComputeBuffer<int>(context,
-                ComputeMemoryFlags.ReadOnly | ComputeMemoryFlags.UseHostPointer, message);
+            //Read device memory varV1 to host memory v1
+            lVariable1.ReadFromDeviceTo(lCalculation);
 
-            kernel.SetMemoryArgument(0, messageBuffer); // set the integer array
-            kernel.SetValueArgument(1, messageSize); // set the array size
-
-            // execute kernel
-            queue.ExecuteTask(kernel, null);
-
-            // wait for completion
-            queue.Finish();
+            //Ausgabe über die CPU Console -> TextBox in der Form
+            int lW = plBack.Width;
+            int lH = plBack.Height;
+            Bitmap b = new Bitmap(lW, lH);
+            for (int i = 0; i < n; i++)
+            {
+                int s = i % lW;
+                int z = i  / lW ;              
+                b.SetPixel(s, z , _DrawColors[lCalculation[i]]);
+            }
+            plBack.BackgroundImage = (Image)b;
+            update();
+            
         }
+
 
 
         /// <summary>

@@ -55,9 +55,9 @@
             this.lblPositionX = new System.Windows.Forms.Label();
             this.txtPositionX = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.txtConsole = new System.Windows.Forms.TextBox();
             this.plBack = new VerteilteSysteme.MyPannel();
             this.plFore = new VerteilteSysteme.MyPannel();
-            this.rtbTestOutput = new System.Windows.Forms.RichTextBox();
             this.grbDisplayMandelbrot.SuspendLayout();
             this.grbSettings.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.nudZoom)).BeginInit();
@@ -114,7 +114,7 @@
             // 
             this.grbSettings.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.grbSettings.Controls.Add(this.rtbTestOutput);
+            this.grbSettings.Controls.Add(this.txtConsole);
             this.grbSettings.Controls.Add(this.btnFindPosition);
             this.grbSettings.Controls.Add(this.label10);
             this.grbSettings.Controls.Add(this.btnTest2);
@@ -364,6 +364,20 @@
             this.label1.Text = "Powered by: Merlin, Nicklas und Peter für den Kurs Verteilte Systeme bei Prof. La" +
     "ng";
             // 
+            // txtConsole
+            // 
+            this.txtConsole.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtConsole.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtConsole.Location = new System.Drawing.Point(6, 433);
+            this.txtConsole.Multiline = true;
+            this.txtConsole.Name = "txtConsole";
+            this.txtConsole.ReadOnly = true;
+            this.txtConsole.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtConsole.Size = new System.Drawing.Size(214, 86);
+            this.txtConsole.TabIndex = 24;
+            // 
             // plBack
             // 
             this.plBack.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -392,17 +406,6 @@
             this.plFore.MouseLeave += new System.EventHandler(this.palOutput_MouseLeave);
             this.plFore.MouseMove += new System.Windows.Forms.MouseEventHandler(this.palOutput_MouseMove);
             this.plFore.MouseUp += new System.Windows.Forms.MouseEventHandler(this.palOutput_MouseUp);
-            // 
-            // rtbTestOutput
-            // 
-            this.rtbTestOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.rtbTestOutput.Location = new System.Drawing.Point(6, 433);
-            this.rtbTestOutput.Name = "rtbTestOutput";
-            this.rtbTestOutput.Size = new System.Drawing.Size(217, 85);
-            this.rtbTestOutput.TabIndex = 21;
-            this.rtbTestOutput.Text = "";
             // 
             // Form1
             // 
@@ -460,7 +463,7 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Button btnJumpToPosition;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.RichTextBox rtbTestOutput;
+        private System.Windows.Forms.TextBox txtConsole;
     }
 }
 
