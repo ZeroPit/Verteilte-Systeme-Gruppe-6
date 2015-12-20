@@ -71,6 +71,33 @@ namespace VerteilteSysteme.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die __kernel void helloWorld() 
+        ///{
+        ///	printf(&quot;%s\n&quot;, &quot;Hello OpenCL&quot;); 
+        ///}
+        ///
+        ///__kernel void sumTwoIntegers(__global int * pInt1,__global int * pInt2)
+        ///{
+        ///	int i = get_global_id(0);	
+        ///	printf(&quot;Sum %d: %d + %d&quot;,i + 1, pInt1[i] ,pInt2[i]);
+        ///	pInt1[i] = pInt1[i] + pInt2[i];
+        ///	printf(&quot; = %d\n&quot;, pInt1[i]);
+        ///}
+        ///
+        ///#ifdef cl_khr_fp64
+        ///    #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+        ///#elif defined(cl_amd_fp64)
+        ///    #pragma OPENCL EXTENSION cl_amd_fp64 : enable
+        ///#else
+        ///    #error &quot;Double precision floating point not suppo [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
+        /// </summary>
+        internal static string kernels {
+            get {
+                return ResourceManager.GetString("kernels", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Ressource vom Typ System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap Settings {

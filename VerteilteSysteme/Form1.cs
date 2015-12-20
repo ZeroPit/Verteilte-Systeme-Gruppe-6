@@ -320,17 +320,22 @@ namespace VerteilteSysteme
 
         private void initOpenCL()
         {
-            // Laden des OpenCL Source Code
-            StreamReader streamReader = new StreamReader("../../kernels.cl");
-            string lClSourceCode = streamReader.ReadToEnd();
-            streamReader.Close();
+            try
+            {
+                // Laden des OpenCL Source Code       
+                string lClSourceCode = VerteilteSysteme.Properties.Resources.kernels;
 
-            //Initializes OpenCL Platforms and Devices and sets everything up
-            OpenCLTemplate.CLCalc.InitCL();
+                //Initializes OpenCL Platforms and Devices and sets everything up
+                OpenCLTemplate.CLCalc.InitCL();
 
-            //Compiles the source codes. The source is a string array because the user may want
-            //to split the source into many strings.
-            OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });
+                //Compiles the source codes. The source is a string array because the user may want
+                //to split the source into many strings.
+                OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });
+            }
+            catch
+            {
+                MessageBox.Show("Fehler beim Laden der OpenCL Platforms und Devices");
+            }
         }
 
         #endregion Init Funktionen
