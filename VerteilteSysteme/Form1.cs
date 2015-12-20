@@ -46,7 +46,7 @@ namespace VerteilteSysteme
         bool _UseGPU = true;
         bool _XYFinder = false;
 
-        // That's our custom TextWriter class
+        // Textwriter Klasse
         TextWriter _writer = null;
 
         #endregion Variablen
@@ -54,7 +54,9 @@ namespace VerteilteSysteme
         #region Konstrukto
 
         /// <summary>
-        /// Konstrukto der Form für die anzeige von Mandelbrot
+        /// Konstruktor der Form für die Anzeige von Mandelbrot
+        /// Initialisierung alle Komponenten und von OpenCL
+        /// Erstellung eines Farbschemas für die spätere Anzeige der Mandelbrotmenge
         /// </summary>
         public Form1()
         {
@@ -130,9 +132,9 @@ namespace VerteilteSysteme
             initMandel();
             AllocConsole();
             Console.WriteLine("Ausgabe GPU");
-            // Instantiate the writer
+            // Text Writer instanziieren
             _writer = new StreamTextBox(txtConsole);
-            // Redirect the out Console stream
+            // TextWriter Inhalt in der Konsole ausgeben
             Console.SetOut(_writer);
             Console.WriteLine("Ausgabe CPU");
         }
@@ -318,6 +320,9 @@ namespace VerteilteSysteme
             updateInfo();
         }
 
+        /// <summary>
+        /// Initialisiert OpenCL
+        /// </summary>
         private void initOpenCL()
         {
             try
@@ -325,11 +330,10 @@ namespace VerteilteSysteme
                 // Laden des OpenCL Source Code       
                 string lClSourceCode = VerteilteSysteme.Properties.Resources.kernels;
 
-                //Initializes OpenCL Platforms and Devices and sets everything up
+                //Initialisiert OpenCL und liest Geräte aus
                 OpenCLTemplate.CLCalc.InitCL();
 
-                //Compiles the source codes. The source is a string array because the user may want
-                //to split the source into many strings.
+                //Kompiliert den Quellcode. Als Parameter wird ein String Array übergeben.
                 OpenCLTemplate.CLCalc.Program.Compile(new string[] { lClSourceCode });
             }
             catch
@@ -350,7 +354,7 @@ namespace VerteilteSysteme
             _DrawColors = new Color[256];
             int i = 0;
             for (int red = 0; red <= 255; red += 51)
-            {/* the six values of red */
+            {
                 for (int green = 0; green <= 255; green += 51)
                 {
                     for (int blue = 0; blue <= 255; blue += 51)
@@ -559,9 +563,9 @@ namespace VerteilteSysteme
         /// </summary>
         private void test1()
         {
-            //Gets host access to the OpenCL floatVectorSum kernel
+            //Erstellt einen neuen Kernel für die Benutzung mit dem Namen "helloWorld"
             OpenCLTemplate.CLCalc.Program.Kernel lHelloWorldKernel = new OpenCLTemplate.CLCalc.Program.Kernel("helloWorld");
-            //Execute the kernel
+            //Kernel ausführen
             lHelloWorldKernel.Execute(null, 1);
         }
 
@@ -574,40 +578,40 @@ namespace VerteilteSysteme
         /// </summary>
         private void test2()
         {
-            //Gets host access to the OpenCL floatVectorSum kernel
+            //Erstellt einen neuen Kernel für die Benutzung mit dem Namen "sumTwoIntegers"
             OpenCLTemplate.CLCalc.Program.Kernel VectorSum = new OpenCLTemplate.CLCalc.Program.Kernel("sumTwoIntegers");
 
-            //We want to sum 10 numbers
+            //Wir wollen 10 Zahlen summieren
             int n = 10;
 
-            //Create vectors with 2000 numbers
+            //Erstelle 2 Vektoren mit je n Zahlen
             int[] lInteger1 = new int[n];
             int[] lInteger2 = new int[n];
 
             //Zufallszahl generieren mittels Random   
             Random lRandom = new Random();
 
-            //Creates population for v1 and v2
+            //Vektoren mit Random Zahlen füllen
             for (int i = 0; i < n; i++)
             {
                 lInteger1[i] = lRandom.Next(0, n);
                 lInteger2[i] = lRandom.Next(0, n);
             }
 
-            //Creates vectors v1 and v2 in the device memory
+            //Zwei Variablen im Gerätespeicher erstellen
             OpenCLTemplate.CLCalc.Program.Variable lVariable1 = new OpenCLTemplate.CLCalc.Program.Variable(lInteger1);
             OpenCLTemplate.CLCalc.Program.Variable lVariable2 = new OpenCLTemplate.CLCalc.Program.Variable(lInteger2);
 
-            //Arguments of VectorSum kernel
+            //Dem Kernel sagen, mit welchen Variablen er arbeiten soll
             OpenCLTemplate.CLCalc.Program.Variable[] lArgsVariable = new OpenCLTemplate.CLCalc.Program.Variable[] { lVariable1, lVariable2 };
 
-            //How many workers will there be? We need “n”, one for each element
+            //Definiert die Anzahl der benötigten Worker, für jedes Element einen
             int[] lWorkers = new int[1] { n };
 
-            //Execute the kernel
+            //Kernel ausführen
             VectorSum.Execute(lArgsVariable, lWorkers);
 
-            //Read device memory varV1 to host memory v1
+            //Inhalt der Gerätespeicher Variable lInteger1 in die Host Variable lVariable1 einlesen
             lVariable1.ReadFromDeviceTo(lInteger1);
 
             //Ausgabe über die CPU Console -> TextBox in der Form
@@ -637,7 +641,7 @@ namespace VerteilteSysteme
         /// </summary>
         private void calculateMandelwithGPU()
         {
-            //Gets host access to the OpenCL floatVectorSum kernel
+            //Erstellt einen neuen Kernel für die Benutzung mit dem Namen "calculateMandel"
             OpenCLTemplate.CLCalc.Program.Kernel VectorSum = new OpenCLTemplate.CLCalc.Program.Kernel("calculateMandel");
 
             //Anzahl aller Pixel die Berechnet werden müssen
@@ -653,20 +657,20 @@ namespace VerteilteSysteme
             lStartValues[4] = plBack.Width;
             lStartValues[5] = plBack.Height;
 
-            //Creates vectors v1 and v2 in the device memory
+            //Erstellt die Vektoren v1 und v2 im Geräte Speicher, mit den Startvariablen und der Anzahl aller zu berechnender Pixel als Werte
             OpenCLTemplate.CLCalc.Program.Variable lVariable1 = new OpenCLTemplate.CLCalc.Program.Variable(lCalculation);
             OpenCLTemplate.CLCalc.Program.Variable lVariable2 = new OpenCLTemplate.CLCalc.Program.Variable(lStartValues);
 
-            //Arguments of VectorSum kernel
+            //Dem Kernel sagen, welche Variablen er benutzen soll
             OpenCLTemplate.CLCalc.Program.Variable[] lArgsVariable = new OpenCLTemplate.CLCalc.Program.Variable[] { lVariable1, lVariable2 };
 
-            //How many workers will there be? We need “n”, one for each element
+            //Festlegen, wieviele Worker benötigt werden. Für jedes Element einen.
             int[] lWorkers = new int[1] { n };
 
-            //Execute the kernel
+            //Den Kernel ausführen
             VectorSum.Execute(lArgsVariable, lWorkers);
 
-            //Read device memory varV1 to host memory v1
+            //Den Inhalt der Gerätevariable lCalculation in die Host Variable lVariable1 einlesen.
             lVariable1.ReadFromDeviceTo(lCalculation);
 
             //Ausgabe über die CPU Console -> TextBox in der Form
